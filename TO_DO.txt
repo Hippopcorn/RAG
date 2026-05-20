@@ -1,0 +1,26 @@
+- recuperer les chemins des fichiers qui m'interesse
+
+- pour chaque fichier :
+    - si c'est un .py : decouper en chunks de classe / fonctions
+
+    - si c'est un .md : decouper en chunks de paragraphes / titres
+
+
+[Bloc Actuel]
+      │
+      ├─► Si (Taille du Chunk Actuel + Taille du Bloc < 2000) 
+        et que on est pas dans une nouvelle section ( pas de nouveau titre)
+      │     └── Rapprocher le Bloc dans le Chunk Actuel
+
+
+      Sinon si le chunk actuel est > 2000 :
+                On le coupe en deux chunks
+      │
+      └─► Sinon (Le bloc va faire dépasser la limite)
+            ├── Sauvegarder le Chunk Actuel (avec ses index et ses métadonnées)
+            └── Créer un NOUVEAU Chunk contenant ce Bloc
+
+
+A suivre :
+- trabnsformer la liste de str en liste de Chunks avec index debut et fin
+- peut etre redécouper index_md_file en plusieurs fonctions
