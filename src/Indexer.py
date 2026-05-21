@@ -101,11 +101,6 @@ class Indexer(BaseModel):
                     search_start_position = self.create_chunk(
                         bloc, content, path, search_start_position)
 
-                # -------DEBUG-------------
-                for chunk in self.chunks_list:
-                    print(chunk)
-                    print("\n\n\n")
-
         except Exception as e:
             print(e)
 
@@ -170,5 +165,4 @@ class Indexer(BaseModel):
 
     def process_files(self):
         for file_path in self.md_files_paths:
-            print("coucou")
             self.index_md_file(file_path)

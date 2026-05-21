@@ -1,4 +1,4 @@
-from .Chunk import Indexer
+from .Indexer import Indexer
 from pathlib import Path
 
 
@@ -8,7 +8,10 @@ def main():
         indexer.get_interest_paths()
         indexer.process_files()
 
-        # indexer.index_md_file("vllm-0.10.1/RELEASE.md")
+        for chunk in indexer.chunks_list:
+            print(chunk)
+            print("\n\n\n")
+
     except Exception as e:
         print(e)
 
