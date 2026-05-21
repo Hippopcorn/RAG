@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from pathlib import Path
+import ast
 
 
 class Chunk(BaseModel):
@@ -105,6 +106,80 @@ class Indexer(BaseModel):
 
         except Exception as e:
             print(e)
+
+    def index_py_file(self, path: str):
+        """ Reads a .py file, parses its syntax with AST,
+            and creates chunks based on classes and global functions """
+        try:
+            with open(path, "r", encoding="utf-8") as file:
+                content = file.read()
+                tree = ast.parse(content, filename=path)
+                lines = content.splitlines()
+
+                search_start_position = 0
+
+                for node in tree.body:
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        start_line = node.lineno - 1
+                        end_line = node.end_lineno
+
+                        bloc_text = "\n".join(lines[start_line:end_line])
+
+                        sub_blocks = self.split_oversized_block([bloc_text])
+
+                        for sub_bloc in sub_blocks:
+                            search_start_position = self.create_chunk(
+                                sub_bloc, content, path, search_start_position
+                            )
+
+                    else:
+                        start_line = node.lineno - 1
+                        end_line = node.end_lineno
+                        bloc_text = "\n".join(lines[start_line:end_line])
+
+                        if bloc_text.strip():
+                            search_start_position = self.create_chunk(
+                                bloc_text, content, path, search_start_position
+                            )
+        except Exception as e:
+            print(e)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def split_oversized_block(self, blocs_list: list[str]):
         """ Split all blocs whose length is greater than 2000.

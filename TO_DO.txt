@@ -1,26 +1,23 @@
-- recuperer les chemins des fichiers qui m'interesse
+L'approche propre passe par le module ast de la stdlib. Tu parses le fichier, ce qui te donne un arbre dont les nœuds top-level 
+(fonctions, classes, imports, assignations module-level, blocs if __name__, etc.) ont chacun un lineno et un end_lineno. Tu connais 
+donc l'étendue exacte de chaque "unité indivisible" du fichier.
 
-- pour chaque fichier :
-    - si c'est un .py : decouper en chunks de classe / fonctions
+Ensuite c'est du bin packing greedy tout bête : tu parcours les nœuds top-level dans l'ordre, tu accumules dans un chunk courant, 
+et dès que rajouter le prochain nœud ferait dépasser 2000 lignes, tu ferme le chunk et tu en démarres un nouveau. Tu obtiens des chunks 
+qui respectent toujours les frontières syntaxiques.
 
-    - si c'est un .md : decouper en chunks de paragraphes / titres
+Quelques pièges à anticiper :
+Les commentaires et lignes vides entre deux nœuds top-level n'appartiennent à aucun nœud dans l'AST. Décide d'une règle : soit tu les 
+rattaches au nœud qui suit (plus naturel, vu que les commentaires documentent souvent ce qui vient après), soit à celui qui précède. 
+Le plus simple est de travailler en mode "ranges de lignes" : pour chaque nœud, tu prends de previous_node.end_lineno + 1 jusqu'à node.end_lineno, 
+comme ça rien ne se perd.
 
+Le cas dégénéré : une fonction ou une classe qui fait à elle seule plus de 2000 lignes. Tu as deux options — soit tu acceptes que 
+ce chunk-là dépasse la limite (recommandé, parce que casser une classe en deux la rend invalide), soit tu signales l'erreur et tu 
+laisses l'utilisateur refactorer. À toi de voir selon le contexte d'usage.
 
-[Bloc Actuel]
-      │
-      ├─► Si (Taille du Chunk Actuel + Taille du Bloc < 2000) 
-        et que on est pas dans une nouvelle section ( pas de nouveau titre)
-      │     └── Rapprocher le Bloc dans le Chunk Actuel
-
-
-      Sinon si le chunk actuel est > 2000 :
-                On le coupe en deux chunks
-      │
-      └─► Sinon (Le bloc va faire dépasser la limite)
-            ├── Sauvegarder le Chunk Actuel (avec ses index et ses métadonnées)
-            └── Créer un NOUVEAU Chunk contenant ce Bloc
-
-
-A suivre :
-- trabnsformer la liste de str en liste de Chunks avec index debut et fin
-- peut etre redécouper index_md_file en plusieurs fonctions
+Si tu veux que chaque chunk soit parseable indépendamment (par exemple si tu les envoies à un LLM ou à un linter), tu peux dupliquer 
+le bloc d'imports en tête de chaque chunk. Idem pour le docstring de module s'il y en a un. Ça coûte quelques lignes mais ça rend 
+chaque morceau autonome.
+Dernier détail utile : garde quelque part le mapping chunk → range de lignes du fichier d'origine. Ça te permet de remonter aux 
+numéros de ligne originaux si jamais tu dois reporter une erreur ou faire un diff.
