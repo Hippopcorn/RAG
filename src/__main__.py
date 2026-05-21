@@ -6,8 +6,8 @@ def main():
     try:
         indexer = Indexer(dir_path=Path("vllm-0.10.1"))
         indexer.get_interest_paths()
-        # indexer.process_files()
-        indexer.index_py_file("vllm-0.10.1/find_cuda_init.py")
+        indexer.process_files()
+        # indexer.index_py_file("vllm-0.10.1/find_cuda_init.py")
 
         for chunk in indexer.chunks_list:
             print(chunk)

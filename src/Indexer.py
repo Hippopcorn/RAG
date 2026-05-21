@@ -49,8 +49,8 @@ class Indexer(BaseModel):
             2000 characters. Then, create blocks with titles and text, until
             2000 characters """
         actual_block: str = ""
-        blocks_list: list[str] = []
         fusion_title_list: list[str] = []
+        search_start_position = 0
 
         try:
             with open(path, "r", encoding="utf-8") as file:
@@ -59,13 +59,13 @@ class Indexer(BaseModel):
 
                 i: int = 0
                 while i < len(splited_blocs):
-                    current_bloc = splited_blocs[i].strip()
-                    if not current_bloc:
+                    current_bloc = splited_blocs[i]
+                    if not current_bloc.strip():
                         i += 1
                         continue
 
                     if (i + 1 < len(splited_blocs)
-                            and current_bloc.startswith("#")
+                            and current_bloc.strip().startswith("#")
                             and splited_blocs[i + 1].startswith("#")):
 
                         merged_titles = current_bloc + "\n\n" + splited_blocs[i + 1]
@@ -79,15 +79,16 @@ class Indexer(BaseModel):
 
                 for bloc in final_list:
 
-                    bloc = bloc.strip()
-                    if not bloc:
+                    if not bloc.strip():
                         continue
-                    is_new_header = bloc.startswith("#")
+                    is_new_header = bloc.strip().startswith("#")
 
                     if actual_block and (
                             len(actual_block) + len(bloc) + 2 > 2000
                             or is_new_header):
-                        blocks_list.append(actual_block)
+
+                        search_start_position = self.create_chunk(
+                            actual_block, content, path, search_start_position)
                         actual_block = bloc
 
                     else:
@@ -97,12 +98,8 @@ class Indexer(BaseModel):
                             actual_block += "\n\n" + bloc
 
                 if actual_block:
-                    blocks_list.append(actual_block)
-
-                search_start_position = 0
-                for bloc in blocks_list:
                     search_start_position = self.create_chunk(
-                        bloc, content, path, search_start_position)
+                        actual_block, content, path, search_start_position)
 
         except Exception as e:
             print(e)
@@ -119,7 +116,9 @@ class Indexer(BaseModel):
                 search_start_position = 0
 
                 for node in tree.body:
-                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    if isinstance(node, (ast.FunctionDef,
+                                         ast.AsyncFunctionDef,
+                                         ast.ClassDef)):
                         start_line = node.lineno - 1
                         end_line = node.end_lineno
 
@@ -143,43 +142,6 @@ class Indexer(BaseModel):
                             )
         except Exception as e:
             print(e)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     def split_oversized_block(self, blocs_list: list[str]):
         """ Split all blocs whose length is greater than 2000.
@@ -231,7 +193,7 @@ class Indexer(BaseModel):
 
         chunk = Chunk(
                         id=len(self.chunks_list),
-                        text=text,
+                        text=text.strip(),
                         file_path=file_path,
                         first_index=first_idx,
                         last_index=last_idx
@@ -243,3 +205,6 @@ class Indexer(BaseModel):
     def process_files(self):
         for file_path in self.md_files_paths:
             self.index_md_file(file_path)
+
+        for file_path in self.py_files_paths:
+            self.index_py_file(file_path)
