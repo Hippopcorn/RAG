@@ -3,6 +3,8 @@ from pathlib import Path
 
 
 class Chunk(BaseModel):
+    """ An object that has an id, store a text, the first index and
+        the last index and the file path """
     id: int
     text: str
     file_path: str
