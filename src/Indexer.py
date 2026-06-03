@@ -1,6 +1,10 @@
 from pydantic import BaseModel
 from pathlib import Path
 import ast
+import re
+import bm25s
+import json
+from tqdm import tqdm
 
 
 class Chunk(BaseModel):
@@ -42,12 +46,12 @@ class Indexer(BaseModel):
 
             self.md_files_paths.append(str(md_file_path))
 
-    def index_md_file(self, path: str):
+    def index_md_file(self, path: str, max_chunk_size: int):
         """ Read a md file, then split it at each \n\n, check alls splits and
             if there are two tittles following, merge them. Call the
             split_oversized_block function to recut splitted_blocs bigger than
-            2000 characters. Then, create blocks with titles and text, until
-            2000 characters """
+            max_chunk_size characters. Then, create blocks with titles
+            and text, until max_chunk_size characters """
         actual_block: str = ""
         fusion_title_list: list[str] = []
         search_start_position = 0
@@ -68,14 +72,16 @@ class Indexer(BaseModel):
                             and current_bloc.strip().startswith("#")
                             and splited_blocs[i + 1].startswith("#")):
 
-                        merged_titles = current_bloc + "\n\n" + splited_blocs[i + 1]
+                        merged_titles = current_bloc + "\n\n" + splited_blocs[
+                            i + 1]
                         fusion_title_list.append(merged_titles)
                         i += 2
                     else:
                         fusion_title_list.append(current_bloc)
                         i += 1
 
-                final_list = self.split_oversized_block(fusion_title_list)
+                final_list = self.split_oversized_block(
+                    fusion_title_list, max_chunk_size)
 
                 for bloc in final_list:
 
@@ -84,7 +90,7 @@ class Indexer(BaseModel):
                     is_new_header = bloc.strip().startswith("#")
 
                     if actual_block and (
-                            len(actual_block) + len(bloc) + 2 > 2000
+                            len(actual_block) + len(bloc) + 2 > max_chunk_size
                             or is_new_header):
 
                         search_start_position = self.create_chunk(
@@ -104,7 +110,7 @@ class Indexer(BaseModel):
         except Exception as e:
             print(e)
 
-    def index_py_file(self, path: str):
+    def index_py_file(self, path: str, max_chunk_size: int):
         """ Reads a .py file, parses its syntax with AST,
             and creates chunks based on classes and global functions """
         try:
@@ -124,7 +130,8 @@ class Indexer(BaseModel):
 
                         bloc_text = "\n".join(lines[start_line:end_line])
 
-                        sub_blocks = self.split_oversized_block([bloc_text])
+                        sub_blocks = self.split_oversized_block(
+                            [bloc_text], max_chunk_size)
 
                         for sub_bloc in sub_blocks:
                             search_start_position = self.create_chunk(
@@ -143,28 +150,29 @@ class Indexer(BaseModel):
         except Exception as e:
             print(e)
 
-    def split_oversized_block(self, blocs_list: list[str]):
-        """ Split all blocs whose length is greater than 2000.
+    def split_oversized_block(self, blocs_list: list[str],
+                              max_chunk_size: int):
+        """ Split all blocs whose length is greater than max_chunk_size.
             Cut them at each \n and return a new list.
-            Re-accumulate their lines safely under 2000 characters """
+            Re-accumulate their lines safely under max_chunk_size char """
         new_list: list[str] = []
 
         for bloc in blocs_list:
-            if len(bloc) > 2000:
+            if len(bloc) > max_chunk_size:
                 lines = bloc.split("\n")
                 current_sub_bloc = ""
 
                 for line in lines:
-                    if len(line) > 2000:
+                    if len(line) > max_chunk_size:
                         if current_sub_bloc:
                             new_list.append(current_sub_bloc.strip())
                             current_sub_bloc = ""
-                        for i in range(0, len(line), 2000):
-                            new_list.append(line[i:i+2000])
+                        for i in range(0, len(line), max_chunk_size):
+                            new_list.append(line[i:i + max_chunk_size])
                         continue
 
                     if (current_sub_bloc and len(current_sub_bloc)
-                            + len(line) + 1 > 2000):
+                            + len(line) + 1 > max_chunk_size):
                         new_list.append(current_sub_bloc.strip())
                         current_sub_bloc = line
                     else:
@@ -202,9 +210,39 @@ class Indexer(BaseModel):
 
         return last_idx
 
-    def process_files(self):
-        for file_path in self.md_files_paths:
-            self.index_md_file(file_path)
+    def process_files(self, max_chunk_size: int):
 
-        for file_path in self.py_files_paths:
-            self.index_py_file(file_path)
+        total = len(self.md_files_paths) + len(self.py_files_paths)
+
+        with tqdm(total=total, desc="Indexing") as pbar:
+            for file_path in self.md_files_paths:
+                self.index_md_file(file_path, max_chunk_size)
+                pbar.update(1)
+
+            for file_path in self.py_files_paths:
+                self.index_py_file(file_path, max_chunk_size)
+                pbar.update(1)
+
+    def normalize(self, chunk_text: str):
+        """ Remove camel case and underscore from a chunk """
+        chunk_text = re.sub(r"([a-z])([A-Z])", r"\1 \2", chunk_text)
+        return chunk_text.replace("_", " ")
+
+    def generate_chunks_and_tokenisation(self, out_dir: str):
+        """ Generate the json with all chunks and tokenise
+            the chunks in bm25_index """
+        out = Path(out_dir)
+        chunks_dir = out / "chunks"
+        chunks_dir.mkdir(parents=True, exist_ok=True)
+
+        chunks = [chunk.model_dump() for chunk in self.chunks_list]
+        (Path("data/processed/chunks") / "chunks.json").write_text(json.dumps(
+            chunks, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"{len(chunks)} chunks stored in "
+              "data/processed/chunks/chunks.json")
+
+        corpus = [self.normalize(c.text) for c in self.chunks_list]
+        corpus_tokens = bm25s.tokenize(corpus, stopwords="en")
+        retriever = bm25s.BM25()
+        retriever.index(corpus_tokens)
+        retriever.save(str(Path("data/processed") / "bm25_index"))

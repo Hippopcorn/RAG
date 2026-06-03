@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field
-import json
 
 
 class Source(BaseModel):
@@ -27,4 +26,3 @@ class RagDataset(BaseModel):
     """ Store all the questions and answer instances """
     questions_list: list[Question] = []
     answer_list: list[Answer] = []
-    

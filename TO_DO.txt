@@ -5,3 +5,6 @@ your recall@k score. Once you have a working baseline with good
 metrics, you can experiment with more sophisticated approaches.
 
 parser et stocker les questions et leurs id
+
+
+## Voir pour traiter les txt ##
