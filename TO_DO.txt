@@ -3,3 +3,5 @@ Permettre au llm de trouver les chunks les plus pertinents pour repondre a la qu
 Start simple! Begin with basic TF-IDF or BM25 retrieval and measure
 your recall@k score. Once you have a working baseline with good
 metrics, you can experiment with more sophisticated approaches.
+
+parser et stocker les questions et leurs id
