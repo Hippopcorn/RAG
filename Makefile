@@ -5,7 +5,7 @@ MAIN_FILE = src/__main__.py
 all: run
 
 run:
-	uv run python -m src
+	uv run python -m src index
 
 install:
 	uv sync

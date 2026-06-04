@@ -1,4 +1,5 @@
 from .Indexer import Indexer
+from .Retriever import Retriever
 from pathlib import Path
 
 
@@ -15,7 +16,13 @@ class CLI:
         indexer.generate_chunks_and_tokenisation(out_dir)
 
     def search(self, query: str, k: int = 5) -> None:
-        ...
+        try:
+            retriever = Retriever.load()
+        except FileNotFoundError:
+            print("Index not found : use the command 'index' first")
+            return
+
+        print(f"{len(retriever.chunks)} chunks loaded")
 
     def search_dataset(self, dataset_path: str, k: int = 10,
                        save_directory: str =
