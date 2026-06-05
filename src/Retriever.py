@@ -1,8 +1,9 @@
 from pydantic import BaseModel, ConfigDict
 import bm25s
 import json
-from .Indexer import Chunk
 from pathlib import Path
+from .Indexer import Chunk
+from .Models import Source, SearchResults
 
 
 class Retriever(BaseModel):
@@ -21,3 +22,26 @@ class Retriever(BaseModel):
         chunks = [Chunk(**dico) for dico in data]
 
         return cls(bm25=bm25, chunks=chunks)
+
+    def retrieve(self, query: str, k: int = 5):
+        """ """
+        indexs, scores = self.bm25.retrieve(bm25s.tokenize(query), k=k)
+
+        best_chunk_indexs = indexs[0]
+
+        retrieved_sources = []
+        for i in best_chunk_indexs:
+            chunk = self.chunks[i]
+            source = Source(
+                file_path=chunk.file_path,
+                first_character_index=chunk.first_index,
+                last_character_index=chunk.last_index
+            )
+            retrieved_sources.append(source)
+
+        result = SearchResults(
+            question_id="single_query",
+            question=query,
+            retrieved_sources=retrieved_sources
+        )
+        print(result.model_dump_json(indent=2))

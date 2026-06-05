@@ -1,6 +1,8 @@
 from .Indexer import Indexer
 from .Retriever import Retriever
+
 from pathlib import Path
+import bm25s
 
 
 class CLI:
@@ -18,11 +20,10 @@ class CLI:
     def search(self, query: str, k: int = 5) -> None:
         try:
             retriever = Retriever.load()
+            retriever.retrieve(query, k)
         except FileNotFoundError:
             print("Index not found : use the command 'index' first")
             return
-
-        print(f"{len(retriever.chunks)} chunks loaded")
 
     def search_dataset(self, dataset_path: str, k: int = 10,
                        save_directory: str =
