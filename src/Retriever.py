@@ -3,7 +3,7 @@ import bm25s
 import json
 from pathlib import Path
 from .Indexer import Chunk
-from .Models import Source, SearchResults
+from .Models import MinimalSource, SearchResults
 
 
 class Retriever(BaseModel):
@@ -23,7 +23,7 @@ class Retriever(BaseModel):
 
         return cls(bm25=bm25, chunks=chunks)
 
-    def retrieve(self, query: str, k: int = 5):
+    def retrieve_one_question(self, query: str, k: int = 5):
         """ """
         indexs, scores = self.bm25.retrieve(bm25s.tokenize(query), k=k)
 
@@ -32,7 +32,7 @@ class Retriever(BaseModel):
         retrieved_sources = []
         for i in best_chunk_indexs:
             chunk = self.chunks[i]
-            source = Source(
+            source = MinimalSource(
                 file_path=chunk.file_path,
                 first_character_index=chunk.first_index,
                 last_character_index=chunk.last_index
@@ -45,3 +45,6 @@ class Retriever(BaseModel):
             retrieved_sources=retrieved_sources
         )
         print(result.model_dump_json(indent=2))
+
+    def retrieve_dataset(self, dataset_path: str):
+        pass

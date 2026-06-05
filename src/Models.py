@@ -1,7 +1,9 @@
 from pydantic import BaseModel, Field
+from typing import List
+import uuid
 
 
-class Source(BaseModel):
+class MinimalSource(BaseModel):
     """ Instanciation of a source, store the path and the
         indexs of the start and the end of the source """
     file_path: str
@@ -9,26 +11,37 @@ class Source(BaseModel):
     last_character_index: int
 
 
-class Question(BaseModel):
+class UnansweredQuestion(BaseModel):
     """ Instanciation of a question and its ID """
-    question_id: str = Field(min_length=5)
-    text: str
+    question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    question: str
 
 
-class SearchResults(BaseModel):
+class AnsweredQuestion(BaseModel):
+    """ Store the answer and the sources """
+    sources: list[MinimalSource]
+    answer: str
+
+
+class MinimalSearchResults(BaseModel):
     question_id: str
     question: str
-    retrieved_sources: list[Source]
+    retrieved_sources: list[MinimalSource]
 
 
-class Answer(BaseModel):
-    """ Store the answer and the sources """
-    question: Question
+class MinimalAnswer(MinimalSearchResults):
     answer: str
-    sources: list[Source] = []
 
 
 class RagDataset(BaseModel):
     """ Store all the questions and answer instances """
-    questions_list: list[Question] = []
-    answer_list: list[Answer] = []
+    rag_questions: List[AnsweredQuestion | UnansweredQuestion]
+
+
+class StudentSearchResults(BaseModel):
+    search_results: List[MinimalSearchResults]
+    k: int
+
+
+class StudentSearchResultsAndAnswer(StudentSearchResults):
+    search_results: List[MinimalAnswer]
