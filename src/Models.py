@@ -12,6 +12,12 @@ class MinimalSource(BaseModel):
     last_character_index: int
 
 
+class MinimalSourceOutput(BaseModel):
+    file_path: str
+    first_character_index: int
+    last_character_index: int
+
+
 class UnansweredQuestion(BaseModel):
     """ Represent a question and its ID """
     question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -27,7 +33,7 @@ class AnsweredQuestion(BaseModel):
 class MinimalSearchResults(BaseModel):
     """ Represent the question and the search results """
     question_id: str
-    question: str
+    question_str: str
     retrieved_sources: list[MinimalSource]
 
 
@@ -47,6 +53,9 @@ class StudentSearchResults(BaseModel):
     k: int
 
 
-class StudentSearchResultsAndAnswer(StudentSearchResults):
-    """ Represent the search results and the answer """
-    search_results: List[MinimalAnswer]
+class StudentSearchResultsAndAnswer(BaseModel):
+    """ Represent the question, the search results and the answer """
+    question_id: str
+    question: str
+    retrieved_sources: List[MinimalSourceOutput]
+    answer: str

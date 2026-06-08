@@ -3,7 +3,8 @@ import bm25s
 import json
 from pathlib import Path
 from .Indexer import Chunk
-from .Models import MinimalSource, MinimalSearchResults, UnansweredQuestion, StudentSearchResults
+from .Models import (MinimalSource, MinimalSearchResults,
+                     UnansweredQuestion, StudentSearchResults)
 from typing import List, Dict
 
 
@@ -27,7 +28,7 @@ class Retriever(BaseModel):
     def get_best_sources(self, query: UnansweredQuestion,
                          k: int = 5) -> MinimalSearchResults:
         """ """
-        indexs, scores = self.bm25.retrieve(bm25s.tokenize(
+        indexs, score = self.bm25.retrieve(bm25s.tokenize(
             query.question), k=k)
 
         best_chunk_indexs = indexs[0]
@@ -45,7 +46,7 @@ class Retriever(BaseModel):
 
         result = MinimalSearchResults(
             question_id=query.question_id,
-            question=query.question,
+            question_str=query.question,
             retrieved_sources=retrieved_sources
         )
         return result
@@ -56,7 +57,7 @@ class Retriever(BaseModel):
             data = json.load(file)
         questions_list: List[UnansweredQuestion] = []
         all_results: List[MinimalSearchResults] = []
-        dict_final: Dict = {"k": k}
+        dict_final: Dict = {"k": int(k)}
 
         for q in data["rag_questions"]:
             new_question = UnansweredQuestion(question_id=q["question_id"],
