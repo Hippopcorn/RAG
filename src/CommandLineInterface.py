@@ -1,5 +1,6 @@
 from .Indexer import Indexer
 from .Retriever import Retriever
+from .Models import UnansweredQuestion
 from pathlib import Path
 
 
@@ -18,7 +19,9 @@ class CLI:
     def search(self, query: str, k: int = 5) -> None:
         try:
             retriever = Retriever.load()
-            retriever.retrieve_one_question(query, k)
+            query_catched = UnansweredQuestion(question_id="single_query",
+                                               question=query)
+            retriever.retrieve_one_question(query_catched, k)
         except FileNotFoundError:
             print("Index not found : use the command 'index' first")
             return
@@ -30,6 +33,7 @@ class CLI:
                        save_directory: str =
                        "data/output/search_results") -> None:
         retriever = Retriever.load()
+        retriever.retrieve_dataset(dataset_path, k)
 
     def answer(self, question: str, k: int = 10) -> None:
         ...

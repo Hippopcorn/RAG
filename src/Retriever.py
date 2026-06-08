@@ -3,7 +3,8 @@ import bm25s
 import json
 from pathlib import Path
 from .Indexer import Chunk
-from .Models import MinimalSource, SearchResults
+from .Models import MinimalSource, MinimalSearchResults, UnansweredQuestion
+from typing import List
 
 
 class Retriever(BaseModel):
@@ -23,9 +24,10 @@ class Retriever(BaseModel):
 
         return cls(bm25=bm25, chunks=chunks)
 
-    def retrieve_one_question(self, query: str, k: int = 5):
+    def retrieve_one_question(self, query: UnansweredQuestion, k: int = 5):
         """ """
-        indexs, scores = self.bm25.retrieve(bm25s.tokenize(query), k=k)
+        indexs, scores = self.bm25.retrieve(bm25s.tokenize(
+            query.question), k=k)
 
         best_chunk_indexs = indexs[0]
 
@@ -39,12 +41,22 @@ class Retriever(BaseModel):
             )
             retrieved_sources.append(source)
 
-        result = SearchResults(
-            question_id="single_query",
-            question=query,
+        result = MinimalSearchResults(
+            question_id=query.question_id,
+            question=query.question,
             retrieved_sources=retrieved_sources
         )
         print(result.model_dump_json(indent=2))
 
-    def retrieve_dataset(self, dataset_path: str):
-        pass
+    def retrieve_dataset(self, dataset_path: str, k: int = 5):
+        with open(dataset_path, encoding="utf-8") as file:
+            data = json.load(file)
+        questions_list: List[UnansweredQuestion] = []
+
+        for q in data["rag_questions"]:
+            new_question = UnansweredQuestion(question_id=q["question_id"],
+                                              question=q["question"])
+            questions_list.append(new_question)
+        
+        for question in questions_list:
+            self.retrieve_one_question(question, k)
