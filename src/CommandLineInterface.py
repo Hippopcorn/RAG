@@ -1,6 +1,7 @@
 from .Indexer import Indexer
 from .Retriever import Retriever
 from .Models import UnansweredQuestion
+from .Evaluator import Evaluator
 from pathlib import Path
 
 
@@ -20,7 +21,7 @@ class CLI:
         retriever = Retriever.load()
         query_catched = UnansweredQuestion(question_id="single_query",
                                            question=query)
-        result = retriever.retrieve_one_question(query_catched, k)
+        result = retriever.get_best_sources(query_catched, k)
         print(result.model_dump_json(indent=2))
 
     def search_dataset(self,
@@ -30,7 +31,7 @@ class CLI:
                        save_directory: str =
                        "data/output/search_results") -> None:
         retriever = Retriever.load()
-        retriever.retrieve_dataset(dataset_path, save_directory, k)
+        retriever.get_best_sources_dataset(dataset_path, save_directory, k)
 
     def answer(self, question: str, k: int = 10) -> None:
         ...
@@ -40,6 +41,8 @@ class CLI:
                        "data/output/search_results_and_answer") -> None:
         ...
 
-    def evaluate(self, student_answer_path: str, dataset_path: str,
+    def evaluate(self, student_answer_path: str = "data/output/search_results/dataset_docs_public.json",
+                 dataset_path: str = "data/datasets/AnsweredQuestions/dataset_docs_public.json",
                  k: int = 10, max_context_length: int = 2000) -> None:
-        ...
+        evaluator = Evaluator()
+        evaluator.evaluate(student_answer_path, dataset_path, k)

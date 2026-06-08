@@ -24,8 +24,8 @@ class Retriever(BaseModel):
 
         return cls(bm25=bm25, chunks=chunks)
 
-    def retrieve_one_question(self, query: UnansweredQuestion,
-                              k: int = 5) -> MinimalSearchResults:
+    def get_best_sources(self, query: UnansweredQuestion,
+                         k: int = 5) -> MinimalSearchResults:
         """ """
         indexs, scores = self.bm25.retrieve(bm25s.tokenize(
             query.question), k=k)
@@ -36,6 +36,7 @@ class Retriever(BaseModel):
         for i in best_chunk_indexs:
             chunk = self.chunks[i]
             source = MinimalSource(
+                text=chunk.text,
                 file_path=chunk.file_path,
                 first_character_index=chunk.first_index,
                 last_character_index=chunk.last_index
@@ -49,8 +50,8 @@ class Retriever(BaseModel):
         )
         return result
 
-    def retrieve_dataset(self, dataset_path: str,
-                         save_directory: str, k: int = 5) -> None:
+    def get_best_sources_dataset(self, dataset_path: str,
+                                 save_directory: str, k: int = 5) -> None:
         with open(dataset_path, encoding="utf-8") as file:
             data = json.load(file)
         questions_list: List[UnansweredQuestion] = []
@@ -63,7 +64,7 @@ class Retriever(BaseModel):
             questions_list.append(new_question)
 
         for question in questions_list:
-            result_search: MinimalSearchResults = self.retrieve_one_question(
+            result_search: MinimalSearchResults = self.get_best_sources(
                 question, k)
             all_results.append(result_search)
 

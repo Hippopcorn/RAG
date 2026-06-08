@@ -6,6 +6,7 @@ import uuid
 class MinimalSource(BaseModel):
     """ Represent a source, and store the path and the
         indexs of the start and the end """
+    text: str
     file_path: str
     first_character_index: int
     last_character_index: int
