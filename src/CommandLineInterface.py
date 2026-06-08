@@ -17,23 +17,20 @@ class CLI:
         indexer.generate_chunks_and_tokenisation(out_dir)
 
     def search(self, query: str, k: int = 5) -> None:
-        try:
-            retriever = Retriever.load()
-            query_catched = UnansweredQuestion(question_id="single_query",
-                                               question=query)
-            retriever.retrieve_one_question(query_catched, k)
-        except FileNotFoundError:
-            print("Index not found : use the command 'index' first")
-            return
+        retriever = Retriever.load()
+        query_catched = UnansweredQuestion(question_id="single_query",
+                                           question=query)
+        result = retriever.retrieve_one_question(query_catched, k)
+        print(result.model_dump_json(indent=2))
 
     def search_dataset(self,
                        dataset_path: str = "data/datasets/"
                        "UnansweredQuestions/dataset_docs_public.json",
-                       k: int = 10,
+                       k: int = 5,
                        save_directory: str =
                        "data/output/search_results") -> None:
         retriever = Retriever.load()
-        retriever.retrieve_dataset(dataset_path, k)
+        retriever.retrieve_dataset(dataset_path, save_directory, k)
 
     def answer(self, question: str, k: int = 10) -> None:
         ...

@@ -3,8 +3,8 @@ import bm25s
 import json
 from pathlib import Path
 from .Indexer import Chunk
-from .Models import MinimalSource, MinimalSearchResults, UnansweredQuestion
-from typing import List
+from .Models import MinimalSource, MinimalSearchResults, UnansweredQuestion, StudentSearchResults
+from typing import List, Dict
 
 
 class Retriever(BaseModel):
@@ -24,7 +24,8 @@ class Retriever(BaseModel):
 
         return cls(bm25=bm25, chunks=chunks)
 
-    def retrieve_one_question(self, query: UnansweredQuestion, k: int = 5):
+    def retrieve_one_question(self, query: UnansweredQuestion,
+                              k: int = 5) -> MinimalSearchResults:
         """ """
         indexs, scores = self.bm25.retrieve(bm25s.tokenize(
             query.question), k=k)
@@ -46,17 +47,37 @@ class Retriever(BaseModel):
             question=query.question,
             retrieved_sources=retrieved_sources
         )
-        print(result.model_dump_json(indent=2))
+        return result
 
-    def retrieve_dataset(self, dataset_path: str, k: int = 5):
+    def retrieve_dataset(self, dataset_path: str,
+                         save_directory: str, k: int = 5) -> None:
         with open(dataset_path, encoding="utf-8") as file:
             data = json.load(file)
         questions_list: List[UnansweredQuestion] = []
+        all_results: List[MinimalSearchResults] = []
+        dict_final: Dict = {"k": k}
 
         for q in data["rag_questions"]:
             new_question = UnansweredQuestion(question_id=q["question_id"],
                                               question=q["question"])
             questions_list.append(new_question)
-        
+
         for question in questions_list:
-            self.retrieve_one_question(question, k)
+            result_search: MinimalSearchResults = self.retrieve_one_question(
+                question, k)
+            all_results.append(result_search)
+
+        results_pure_python = [res.model_dump() for res in all_results]
+        dict_final = {"search_results": results_pure_python} | dict_final
+
+        path_output_dir = Path(save_directory)
+        path_output_dir.mkdir(parents=True, exist_ok=True)
+        file_name_dataset = Path(dataset_path).name
+        search_results = StudentSearchResults(search_results=all_results, k=k)
+
+        with open(path_output_dir / file_name_dataset, 'w',
+                  encoding="utf-8") as output_file:
+            json.dump(search_results.model_dump(), output_file, indent=4,
+                      ensure_ascii=False)
+        print("Saved student_search_results to "
+              f"{path_output_dir}/{file_name_dataset}")

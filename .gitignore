@@ -7,3 +7,4 @@ output/
 .pytest_cache/
 rag.subject.pdf
 data/processed/
+data/output/
