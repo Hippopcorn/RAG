@@ -18,7 +18,7 @@ class Chunk(BaseModel):
 
 
 class Indexer(BaseModel):
-    """ Handles retrieving all the interest files from the vllm directotory
+    """ Handles retrieving all the interest files from the vllm directory
         and index them into Chunks """
     dir_path: Path
     chunks_list: list[Chunk] = []
