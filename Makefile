@@ -19,6 +19,10 @@ clean:
 	rm -rf *.pyc
 	rm -rf .pytest_cache
 
+fclean: clean
+	rm -rf data/processed
+	rm -rf data/output
+
 lint:
 	@echo "--- Running Flake8---"
 	python3 -m flake8 . --exclude=.venv 
@@ -26,4 +30,4 @@ lint:
 	python3 -m mypy $(MYPY_FLAGS) .
 
 
-.PHONY: install run debug clean lint
+.PHONY: install run debug clean fclean lint

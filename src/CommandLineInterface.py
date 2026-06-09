@@ -1,7 +1,7 @@
-from .Indexer import Indexer
 from .Retriever import Retriever
 from .Models import UnansweredQuestion, MinimalSearchResults
 from .Evaluator import Evaluator
+from .Chunker import Chunker
 from pathlib import Path
 from .LLM import LLM
 import json
@@ -16,11 +16,10 @@ class CLI:
     def index(self, max_chunk_size: int = 2000,
               repo_path: str = "data/raw/vllm-0.10.1",
               out_dir: str = "data/processed") -> None:
-
-        indexer = Indexer(dir_path=Path(repo_path))
-        indexer.get_interest_paths()
-        indexer.process_files(max_chunk_size)
-        indexer.generate_chunks_and_tokenisation(out_dir)
+        chunker = Chunker(dir_path=Path(repo_path))
+        chunker.load_docs()
+        chunker.chunk_docs(max_chunk_size)
+        chunker.generate_chunks_and_tokenisation(out_dir)
 
     def search(self, query: str, k: int = 5) -> None:
         retriever = Retriever.load()

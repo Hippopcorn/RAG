@@ -2,7 +2,6 @@ from pydantic import BaseModel, ConfigDict
 import bm25s
 import json
 from pathlib import Path
-from .Indexer import Chunk
 from .Models import (MinimalSource, MinimalSearchResults,
                      UnansweredQuestion, StudentSearchResults)
 from typing import List, Dict
@@ -11,7 +10,7 @@ from typing import List, Dict
 class Retriever(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     bm25: bm25s.BM25
-    chunks: list[Chunk] = []
+    chunks: list[MinimalSource] = []
 
     @classmethod
     def load(cls, processed_dir: str = "data/processed") -> "Retriever":
@@ -21,28 +20,23 @@ class Retriever(BaseModel):
         with open(Path(processed_dir) / "chunks" / "chunks.json",
                   encoding="utf-8") as file:
             data = json.load(file)
-        chunks = [Chunk(**dico) for dico in data]
+        chunks = [MinimalSource(**dict) for dict in data]
 
         return cls(bm25=bm25, chunks=chunks)
 
     def get_best_sources(self, query: UnansweredQuestion,
                          k: int = 5) -> MinimalSearchResults:
-        """ """
+        """ Return a list of MinimalSearchResults with the k
+            sources the most pertinents """
         indexs, score = self.bm25.retrieve(bm25s.tokenize(
             query.question), k=k)
 
         best_chunk_indexs = indexs[0]
 
         retrieved_sources = []
+
         for i in best_chunk_indexs:
-            chunk = self.chunks[i]
-            source = MinimalSource(
-                text=chunk.text,
-                file_path=chunk.file_path,
-                first_character_index=chunk.first_index,
-                last_character_index=chunk.last_index
-            )
-            retrieved_sources.append(source)
+            retrieved_sources.append(self.chunks[i])
 
         result = MinimalSearchResults(
             question_id=query.question_id,
