@@ -70,7 +70,7 @@ class Chunker(BaseModel):
 
         langchain_py_chunks: List[Document] = py_splitter.split_documents(
             self.py_files)
-        
+
         langchain_txt_chunks = txt_splitter.split_documents(self.txt_files)
 
         all_langchain_chunks: List[Document] = (langchain_md_chunks +

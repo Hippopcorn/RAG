@@ -53,10 +53,12 @@ class CLI:
             search_results, query_catched).model_dump()
         print(json.dumps(printable_answer, indent=4, ensure_ascii=False))
 
-    def answer_dataset(self, student_search_results_path: str,
+    def answer_dataset(self, student_search_results_path: str =
+                       "data/output/search_results/dataset_docs_public.json",
                        save_directory: str =
                        "data/output/search_results_and_answer") -> None:
-        ...
+        llm = LLM()
+        llm.handle_dataset(student_search_results_path, save_directory)
 
     def evaluate(self, student_answer_path: str = "data/output/"
                  "search_results/dataset_docs_public.json",

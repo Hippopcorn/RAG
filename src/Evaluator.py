@@ -62,17 +62,16 @@ class Evaluator(BaseModel):
             if question_success:
                 successful_retrievals += 1
 
-        # 4. Calcul du score Recall@k final
         if total_questions == 0:
-            print("Aucune correspondance trouvée entre"
-                  " les IDs des deux fichiers.")
+            print("No correspondence found"
+                  " between the two files")
             return 0.0
 
         recall_at_k = (successful_retrievals / total_questions) * 100
 
-        print("\n--- ÉVALUATION RAG ---")
-        print(f"Questions évaluées : {total_questions}")
-        print(f"Requêtes réussies (IoU >= 5%) : {successful_retrievals}")
+        print("\n--- RAG EVALUATION ---")
+        print(f"Nb query : {total_questions}")
+        print(f"Query succeeded (IoU >= 5%) : {successful_retrievals}")
         print(f"Recall@{k} Final : {recall_at_k:.2f}%")
 
         return recall_at_k
