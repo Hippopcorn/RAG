@@ -56,17 +56,17 @@ class Chunker(BaseModel):
 
         md_splitter = MarkdownTextSplitter(
             chunk_size=max_chunk_size,
-            chunk_overlap=int(max_chunk_size * 0.1)
+            chunk_overlap=500
         )
 
         py_splitter = RecursiveCharacterTextSplitter.from_language(
             language=Language.PYTHON,
             chunk_size=max_chunk_size,
-            chunk_overlap=int(max_chunk_size * 0.1)
+            chunk_overlap=500
         )
         txt_splitter = RecursiveCharacterTextSplitter(
             chunk_size=max_chunk_size,
-            chunk_overlap=int(max_chunk_size * 0.1)
+            chunk_overlap=500
         )
 
         langchain_md_chunks: List[Document] = md_splitter.split_documents(

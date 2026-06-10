@@ -5,6 +5,7 @@ from pathlib import Path
 from .Models import (MinimalSource, MinimalSearchResults,
                      UnansweredQuestion, StudentSearchResults)
 from typing import List, Dict
+import re
 
 
 class Retriever(BaseModel):
@@ -32,8 +33,9 @@ class Retriever(BaseModel):
         """Run BM25 retrieval for ``query`` and return a
         :class:`MinimalSearchResults` containing the ``k`` most relevant
         chunks of the corpus."""
+        normalized_question = self.normalize_query(query.question)
         indexs, score = self.bm25.retrieve(bm25s.tokenize(
-            query.question), k=k)
+            normalized_question), k=k)
 
         best_chunk_indexs = indexs[0]
 
@@ -84,3 +86,8 @@ class Retriever(BaseModel):
                       ensure_ascii=False)
         print("Saved student_search_results to "
               f"{path_output_dir}/{file_name_dataset}")
+
+    def normalize_query(self, query_text: str) -> str:
+        """Applique exactement le même traitement qu'à l'indexation."""
+        query_text = re.sub(r"([a-z])([A-Z])", r"\1 \2", query_text)
+        return query_text.replace("_", " ")

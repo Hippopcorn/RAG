@@ -1,11 +1,8 @@
-## Voir pour traiter les txt ##
 
 Ameliorer les scores (76% doc et 20% code)
 --> 78% et 24%
-
-voir pour que la reponse soit plus une vrai phrase corecte
-
-implementer le answer dataset
+--> 82 % et 67%
+--> 83 % et 69%
 
 demander a Claude pour enlever les warnings
 

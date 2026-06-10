@@ -222,7 +222,7 @@ uv run python -m src search "How to configure OpenAI server?" --k 10
 
 ### Search all questions of a dataset
 
-Documentation questions:
+Documentation questions (by default):
 
 ```bash
 uv run python -m src search_dataset
@@ -247,6 +247,13 @@ uv run python -m src answer "How to configure OpenAI server?" --k 5
 uv run python -m src answer_dataset \
     --student_search_results_path data/output/search_results/dataset_docs_public.json \
     --save_directory data/output/search_results_and_answer
+```
+
+### Evaluate retrieval with evaluate command
+```bash
+uv run python -m src evaluate \
+  --student_answer_path data/output/search_results/dataset_docs_public.json \
+  --dataset_path data/datasets/AnsweredQuestions/dataset_docs_public.json
 ```
 
 ### Evaluate retrieval with the moulinette
