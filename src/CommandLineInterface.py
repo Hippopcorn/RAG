@@ -5,9 +5,6 @@ from .Chunker import Chunker
 from pathlib import Path
 from .LLM import LLM
 import json
-import logging
-import warnings
-import os
 
 
 class CLI:
@@ -63,9 +60,6 @@ class CLI:
     def answer(self, query: str, k: int = 5) -> None:
         """Retrieve the top k sources for the query, generate an answer with
         the LLM and print it as JSON"""
-        warnings.filterwarnings("ignore")
-        logging.getLogger("transformers").setLevel(logging.ERROR)
-        os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
         if not Path("data/processed/bm25_index").exists():
             print("Error: no index found, run 'index' first.")

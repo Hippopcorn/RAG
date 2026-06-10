@@ -44,23 +44,19 @@ class LLM(BaseModel):
     def generate_answer(self, list_sources: MinimalSearchResults,
                         query: UnansweredQuestion,
                         max_tokens: int = 40) -> StudentSearchResultsAndAnswer:
-        """Generate an answer for the query using the top retrieved source as
+        """Generate an answer for the query using the retrieved sources as
         context, and return it with the question and the source pointers"""
         output_sources: List[MinimalSourceOutput] = []
 
-        if list_sources.retrieved_sources:
-            top = list_sources.retrieved_sources[0]
-            context = top.text or self.read_source_text(top)
-        else:
-            context = ""
+        context = "\n\n".join(
+            source.text or self.read_source_text(source)
+            for source in list_sources.retrieved_sources)
 
         generator = self.load_generator()
         messages = [
             {"role": "system",
              "content": ("Answer the question using only the provided "
-                         "context. Make a complete sentence to answer. If "
-                         "the answer is not in the context, say 'I don't "
-                         f"know'.\n\nContext:\n{context}")},
+                         f"context: {context}")},
             {"role": "user", "content": query.question},
         ]
 

@@ -21,10 +21,6 @@ stage (`index`, `search`, `search_dataset`, `answer`, `answer_dataset`,
 
 ## Instructions
 
-### Requirements
-
-- Python 3.10+
-- [`uv`](https://github.com/astral-sh/uv) as package / project manager
 
 ### Installation
 
@@ -32,8 +28,6 @@ stage (`index`, `search`, `search_dataset`, `answer`, `answer_dataset`,
 uv venv && uv sync
 ```
 
-The raw vLLM repository must be available under `data/raw/vllm-0.10.1` (it is
-provided as an attachment by the subject).
 
 ### Makefile
 
@@ -44,6 +38,7 @@ make install     # install dependencies
 make run         # run the CLI entry point
 make lint        # flake8 + mypy
 make clean       # remove caches and temporary files
+make fclean      # remove caches and temporary files and all the files generated during the execution
 ```
 
 ### Running the CLI
@@ -120,12 +115,6 @@ For every produced chunk we reopen the original file and recover the exact
 directly comparable to the ground-truth character spans used by the
 evaluator.
 
-Each chunk is then turned into a **searchable representation** before being
-fed to the BM25 tokenizer (detailed in *Retrieval method*): the body text is
-kept both as-is and split on camelCase / underscores, and the chunk's
-file-path tokens (e.g. `lora`, `fused_batched_moe`) are appended and weighted,
-because the file name is a strong topic signal.
-
 ## Retrieval method
 
 Retrieval is done with **BM25** through the
@@ -143,14 +132,9 @@ Retrieval is done with **BM25** through the
 3. For datasets, `get_best_sources_dataset` iterates over every
    `UnansweredQuestion` and writes a single `StudentSearchResults` JSON file.
 
-This identifier-aware expansion (dual raw/split tokens + stemming + file-path
-boosting) is what lifts recall@5 to **86% (docs)** and **80% (code)**, well
-above the 80% / 50% thresholds.
 
 BM25 was chosen over TF-IDF for its better behaviour on long documents and
-over dense embeddings for its zero-GPU footprint and very fast cold start —
-both criteria explicitly required by the subject (5 min indexing budget,
-60 s cold start).
+over dense embeddings for its zero-GPU footprint and very fast cold start.
 
 ## Answer generation
 
@@ -182,8 +166,6 @@ Target thresholds from the subject:
 | Docs    | Recall@5 | >= 80%    | **86%**  |
 | Code    | Recall@5 | >= 50%    | **80%**  |
 
-The official scores must be measured with the provided moulinette (see
-*Example usage* below).
 
 ## Design decisions
 
@@ -285,7 +267,6 @@ cd moulinette
 - [BM25 — original Okapi BM25 paper](https://en.wikipedia.org/wiki/Okapi_BM25)
 - [`bm25s` — fast pure-Python BM25 implementation](https://github.com/xhluca/bm25s)
 - [LangChain text splitters documentation](https://python.langchain.com/docs/concepts/text_splitters/)
-- [Qwen3-0.6B model card](https://huggingface.co/Qwen/Qwen3-0.6B)
 - [Python Fire — automatic CLI generation](https://github.com/google/python-fire)
 
 ### Use of AI
@@ -293,14 +274,7 @@ cd moulinette
 AI assistants were used during this project for the following, well-scoped
 tasks:
 
-- **Exploring the LangChain text-splitter API** and choosing the right
-  splitter per file type (Markdown vs. Python vs. plain text).
 - **Drafting docstrings** for the classes and methods of the `src/` modules
   (every docstring was then re-read and edited by hand).
 - **Brainstorming the chunk-normalisation step** (camelCase / snake_case
   handling) before benchmarking it against the moulinette.
-- **Rubber-ducking design decisions** (BM25 vs. dense retrieval, prompt shape
-  for the Qwen chat template).
-
-No AI-generated code was committed without being read, understood and
-adapted to the project's structure.
