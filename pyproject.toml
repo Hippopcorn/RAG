@@ -17,3 +17,10 @@ dependencies = [
     "tqdm>=4.67.3",
     "transformers>=5.10.2",
 ]
+
+[tool.mypy]
+exclude = [
+    'data/raw/',
+    'moulinette/',
+    '\.venv/',
+]

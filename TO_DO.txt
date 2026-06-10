@@ -1,9 +1,0 @@
-
-Ameliorer les scores (76% doc et 20% code)
---> 78% et 24%
---> 82 % et 67%
---> 83 % et 69%
-
-demander a Claude pour enlever les warnings
-
-gestion des erreurs

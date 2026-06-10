@@ -3,14 +3,13 @@ from pydantic import BaseModel
 
 
 class Evaluator(BaseModel):
-    """Compute retrieval quality metrics (Recall@k with IoU-based matching)
-    by comparing student predictions to a ground-truth dataset."""
+    """Measure retrieval quality with Recall@k, matching sources by their
+    character overlap (IoU) against a ground-truth dataset"""
 
     def calculate_iou(self, start1: int, end1: int,
                       start2: int, end2: int) -> float:
-        """Return the Intersection-over-Union of two character ranges, i.e.
-        the proportion of overlapping characters relative to the union of
-        the two source spans."""
+        """Return the intersection-over-union of two character ranges: the
+        shared characters divided by the total span they cover."""
         intersection_start = max(start1, start2)
         intersection_end = min(end1, end2)
 
@@ -23,10 +22,9 @@ class Evaluator(BaseModel):
 
     def evaluate(self, student_answer_path: str,
                  dataset_path: str, k: int = 5) -> float:
-        """Compare student predictions against the ground truth: a question is
-        counted as successful when at least one of the top-``k`` retrieved
-        sources shares its file path with a ground-truth source and has an
-        IoU of at least 5% with it. Prints and returns the Recall@k (in %)."""
+        """Compare student results to the ground truth and return Recall@k
+        (in %). A question counts as found when one of its top-k sources has
+        the same file path and at least 5% IoU with a correct source"""
         with open(student_answer_path, encoding="utf-8") as f:
             student_data = json.load(f)
         predictions = student_data.get("search_results", [])

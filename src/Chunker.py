@@ -9,12 +9,12 @@ from langchain_core.documents import Document
 import re
 import bm25s
 import json
+import Stemmer
 
 
 class Chunker(BaseModel):
-    """Walk a source directory, load the ``.py``, ``.md`` and ``.txt`` files
-    of interest, split them into chunks and persist them together with a BM25
-    index that can later be reused by the retriever."""
+    """Load source files, split them into chunks, and build a BM25 index that
+    the retriever can reuse later"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
     dir_path: Path
     chunks_list: list[MinimalSource] = []
@@ -22,9 +22,9 @@ class Chunker(BaseModel):
     md_files: List[Document] = []
     txt_files: list[Document] = []
 
-    def load_docs(self):
+    def load_docs(self) -> None:
         """Load every Markdown, Python and text file from the source directory
-        into the corresponding ``md_files``/``py_files``/``txt_files`` lists."""
+        into the matching list (md_files, py_files, txt_files)"""
         md_loader = DirectoryLoader(
             "data/raw/vllm-0.10.1",
             glob="**/*.md",
@@ -49,10 +49,10 @@ class Chunker(BaseModel):
         )
         self.txt_files = txt_loader.load()
 
-    def chunk_docs(self, max_chunk_size: int = 2000):
-        """Split the loaded documents with the splitter matching their
-        language and fill ``chunks_list`` with the resulting chunks converted
-        into :class:`MinimalSource` instances (with original file offsets)."""
+    def chunk_docs(self, max_chunk_size: int = 2000) -> None:
+        """Split each loaded file with the splitter for its type and store the
+        chunks in chunks_list as MinimalSource objects, keeping each chunk's
+        start and end position in the original file"""
 
         md_splitter = MarkdownTextSplitter(
             chunk_size=max_chunk_size,
@@ -99,15 +99,34 @@ class Chunker(BaseModel):
                 )
             self.chunks_list.append(new_minimal_source)
 
-    def normalize(self, chunk_text: str):
-        """Split camelCase identifiers and replace underscores with spaces so
-        that the BM25 tokenizer can index sub-words as separate terms."""
+    def normalize(self, chunk_text: str) -> str:
+        """Split camelCase and snake_case words so BM25 can index each
+        sub-word as a separate term"""
         chunk_text = re.sub(r"([a-z])([A-Z])", r"\1 \2", chunk_text)
         return chunk_text.replace("_", " ")
 
-    def generate_chunks_and_tokenisation(self, out_dir: str):
-        """Persist ``chunks_list`` as ``chunks.json`` and build/save the BM25
-        index of the normalized chunk texts under ``out_dir``."""
+    def expand_text(self, text: str) -> str:
+        """Keep the original identifiers and also add their split sub-tokens,
+        so exact-identifier and natural-language queries can both match"""
+        return text + " " + self.normalize(text)
+
+    def path_tokens(self, file_path: str) -> str:
+        """Turn a file path into tokens; the file name is a strong topic
+        signal (e.g. lora.md or fused_batched_moe.py)"""
+        base = file_path.replace(f"{self.dir_path}/", "")
+        base = re.sub(r"[\\/_.\-]", " ", base)
+        return self.normalize(base)
+
+    def document_text(self, source: MinimalSource) -> str:
+        """Searchable text of a chunk: expanded body plus its file-path
+        tokens repeated to boost their weight"""
+        path_weight = 4
+        return (self.expand_text(source.text)
+                + (" " + self.path_tokens(source.file_path)) * path_weight)
+
+    def generate_chunks_and_tokenisation(self, out_dir: str) -> None:
+        """Save the chunks to chunks.json, then build and save the BM25 index
+        of the normalized chunk texts under out_dir"""
         out = Path(out_dir)
         chunks_dir = out / "chunks"
         chunks_dir.mkdir(parents=True, exist_ok=True)
@@ -118,8 +137,9 @@ class Chunker(BaseModel):
         print(f"{len(chunks)} chunks stored in "
               "data/processed/chunks/chunks.json")
 
-        corpus = [self.normalize(c.text) for c in self.chunks_list]
-        corpus_tokens = bm25s.tokenize(corpus, stopwords="en")
+        stemmer = Stemmer.Stemmer("english")
+        corpus = [self.document_text(c) for c in self.chunks_list]
+        corpus_tokens = bm25s.tokenize(corpus, stopwords="en", stemmer=stemmer)
         retriever = bm25s.BM25()
         retriever.index(corpus_tokens)
         retriever.save(str(Path("data/processed") / "bm25_index"))

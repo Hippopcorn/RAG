@@ -25,7 +25,7 @@ fclean: clean
 
 lint:
 	@echo "--- Running Flake8---"
-	python3 -m flake8 . --exclude=.venv 
+	python3 -m flake8 . --exclude=.venv,data/raw,moulinette 
 	@echo "\n--- Running Mypy---"
 	python3 -m mypy $(MYPY_FLAGS) .
 
