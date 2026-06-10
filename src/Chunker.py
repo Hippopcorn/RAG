@@ -12,8 +12,9 @@ import json
 
 
 class Chunker(BaseModel):
-    """ Handles retrieving all the interest files from the vllm directory
-        and index them into MinimalSource """
+    """Walk a source directory, load the ``.py``, ``.md`` and ``.txt`` files
+    of interest, split them into chunks and persist them together with a BM25
+    index that can later be reused by the retriever."""
     model_config = ConfigDict(arbitrary_types_allowed=True)
     dir_path: Path
     chunks_list: list[MinimalSource] = []
@@ -22,6 +23,8 @@ class Chunker(BaseModel):
     txt_files: list[Document] = []
 
     def load_docs(self):
+        """Load every Markdown, Python and text file from the source directory
+        into the corresponding ``md_files``/``py_files``/``txt_files`` lists."""
         md_loader = DirectoryLoader(
             "data/raw/vllm-0.10.1",
             glob="**/*.md",
@@ -47,8 +50,9 @@ class Chunker(BaseModel):
         self.txt_files = txt_loader.load()
 
     def chunk_docs(self, max_chunk_size: int = 2000):
-        """ Splits the loaded documents and fills chunks_list with all
-            the chunks converts into minimalSource """
+        """Split the loaded documents with the splitter matching their
+        language and fill ``chunks_list`` with the resulting chunks converted
+        into :class:`MinimalSource` instances (with original file offsets)."""
 
         md_splitter = MarkdownTextSplitter(
             chunk_size=max_chunk_size,
@@ -96,13 +100,14 @@ class Chunker(BaseModel):
             self.chunks_list.append(new_minimal_source)
 
     def normalize(self, chunk_text: str):
-        """ Remove camel case and underscore from a chunk """
+        """Split camelCase identifiers and replace underscores with spaces so
+        that the BM25 tokenizer can index sub-words as separate terms."""
         chunk_text = re.sub(r"([a-z])([A-Z])", r"\1 \2", chunk_text)
         return chunk_text.replace("_", " ")
 
     def generate_chunks_and_tokenisation(self, out_dir: str):
-        """ Generate the json with all chunks and tokenise
-            the chunks in bm25_index """
+        """Persist ``chunks_list`` as ``chunks.json`` and build/save the BM25
+        index of the normalized chunk texts under ``out_dir``."""
         out = Path(out_dir)
         chunks_dir = out / "chunks"
         chunks_dir.mkdir(parents=True, exist_ok=True)

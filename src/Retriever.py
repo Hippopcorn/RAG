@@ -8,13 +8,16 @@ from typing import List, Dict
 
 
 class Retriever(BaseModel):
+    """BM25-based retriever that loads a pre-built index and returns the most
+    relevant chunks for a given question."""
     model_config = ConfigDict(arbitrary_types_allowed=True)
     bm25: bm25s.BM25
     chunks: list[MinimalSource] = []
 
     @classmethod
     def load(cls, processed_dir: str = "data/processed") -> "Retriever":
-        """Reload the BM25 index and chunks saved by `index`."""
+        """Reload the BM25 index and the chunks file produced by ``index`` and
+        return a ready-to-use :class:`Retriever` instance."""
         bm25 = bm25s.BM25.load(str(Path(processed_dir) / "bm25_index"))
 
         with open(Path(processed_dir) / "chunks" / "chunks.json",
@@ -26,8 +29,9 @@ class Retriever(BaseModel):
 
     def get_best_sources(self, query: UnansweredQuestion,
                          k: int = 5) -> MinimalSearchResults:
-        """ Return a list of MinimalSearchResults with the k
-            sources the most pertinents """
+        """Run BM25 retrieval for ``query`` and return a
+        :class:`MinimalSearchResults` containing the ``k`` most relevant
+        chunks of the corpus."""
         indexs, score = self.bm25.retrieve(bm25s.tokenize(
             query.question), k=k)
 
@@ -47,6 +51,9 @@ class Retriever(BaseModel):
 
     def get_best_sources_dataset(self, dataset_path: str,
                                  save_directory: str, k: int = 5) -> None:
+        """Load every question from the dataset at ``dataset_path``, run
+        retrieval for each of them and serialize the aggregated results as a
+        :class:`StudentSearchResults` JSON file under ``save_directory``."""
         with open(dataset_path, encoding="utf-8") as file:
             data = json.load(file)
         questions_list: List[UnansweredQuestion] = []

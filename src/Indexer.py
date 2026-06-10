@@ -8,8 +8,8 @@ from tqdm import tqdm
 
 
 class Chunk(BaseModel):
-    """ An object that has an id, store a text, the first index and
-        the last index and the file path """
+    """A single indexed snippet: its identifier, its text, the originating
+    file path and the start/end character offsets in that file."""
     id: int
     text: str
     file_path: str
@@ -18,16 +18,16 @@ class Chunk(BaseModel):
 
 
 class Indexer(BaseModel):
-    """ Handles retrieving all the interest files from the vllm directory
-        and index them into Chunks """
+    """Custom indexer that walks a directory, builds language-aware chunks
+    from ``.md`` and ``.py`` files and saves them together with a BM25 index."""
     dir_path: Path
     chunks_list: list[Chunk] = []
     py_files_paths: list[str] = []
     md_files_paths: list[str] = []
 
     def get_interest_paths(self):
-        """ Get a filtered list with the paths of the .py and .md files
-            located in the dir_path """
+        """Recursively collect the ``.py`` and ``.md`` files located under
+        ``dir_path``, skipping test, cache and pytest-cache folders."""
 
         for py_file_path in self.dir_path.rglob("*.py"):
 
@@ -47,11 +47,11 @@ class Indexer(BaseModel):
             self.md_files_paths.append(str(md_file_path))
 
     def index_md_file(self, path: str, max_chunk_size: int):
-        """ Read a md file, then split it at each \n\n, check alls splits and
-            if there are two tittles following, merge them. Call the
-            split_oversized_block function to recut splitted_blocs bigger than
-            max_chunk_size characters. Then, create blocks with titles
-            and text, until max_chunk_size characters """
+        """Index a single Markdown file: split it on blank lines, merge two
+        consecutive header blocks together, re-cut any oversized block via
+        :meth:`split_oversized_block` and then greedily group blocks into
+        chunks of at most ``max_chunk_size`` characters, starting a new
+        chunk whenever a header is encountered."""
         actual_block: str = ""
         fusion_title_list: list[str] = []
         search_start_position = 0
@@ -111,8 +111,9 @@ class Indexer(BaseModel):
             print(e)
 
     def index_py_file(self, path: str, max_chunk_size: int):
-        """ Reads a .py file, parses its syntax with AST,
-            and creates chunks based on classes and global functions """
+        """Index a single Python file by parsing it with ``ast`` and creating
+        one chunk per top-level class, function or other statement, splitting
+        any oversized block to respect ``max_chunk_size``."""
         try:
             with open(path, "r", encoding="utf-8") as file:
                 content = file.read()
@@ -152,9 +153,10 @@ class Indexer(BaseModel):
 
     def split_oversized_block(self, blocs_list: list[str],
                               max_chunk_size: int):
-        """ Split all blocs whose length is greater than max_chunk_size.
-            Cut them at each \n and return a new list.
-            Re-accumulate their lines safely under max_chunk_size char """
+        """Return a new list where every block longer than ``max_chunk_size``
+        has been re-cut: lines are accumulated greedily within the size
+        limit, and lines themselves longer than ``max_chunk_size`` are
+        hard-split into fixed-size pieces."""
         new_list: list[str] = []
 
         for bloc in blocs_list:
@@ -190,8 +192,10 @@ class Indexer(BaseModel):
 
     def create_chunk(self, text: str, content_file: str,
                      file_path: str, search_start_position: int):
-        """ Create a chunk with a bloc of text, and calcul it first and last
-            index. Add it in the chunks_list """
+        """Locate ``text`` inside ``content_file`` (starting the search at
+        ``search_start_position``), build a :class:`Chunk` with the resulting
+        offsets, append it to ``chunks_list`` and return the end offset so
+        the caller can resume the search from there."""
         first_idx = content_file.find(text, search_start_position)
 
         if first_idx == -1:
@@ -211,7 +215,8 @@ class Indexer(BaseModel):
         return last_idx
 
     def process_files(self, max_chunk_size: int):
-
+        """Iterate over the previously collected Markdown and Python paths
+        and index every file, showing a progress bar."""
         total = len(self.md_files_paths) + len(self.py_files_paths)
 
         with tqdm(total=total, desc="Indexing") as pbar:
@@ -224,13 +229,14 @@ class Indexer(BaseModel):
                 pbar.update(1)
 
     def normalize(self, chunk_text: str):
-        """ Remove camel case and underscore from a chunk """
+        """Split camelCase identifiers and replace underscores with spaces so
+        that the BM25 tokenizer can index sub-words as separate terms."""
         chunk_text = re.sub(r"([a-z])([A-Z])", r"\1 \2", chunk_text)
         return chunk_text.replace("_", " ")
 
     def generate_chunks_and_tokenisation(self, out_dir: str):
-        """ Generate the json with all chunks and tokenise
-            the chunks in bm25_index """
+        """Persist ``chunks_list`` as ``chunks.json`` and build/save the BM25
+        index of the normalized chunk texts under ``out_dir``."""
         out = Path(out_dir)
         chunks_dir = out / "chunks"
         chunks_dir.mkdir(parents=True, exist_ok=True)

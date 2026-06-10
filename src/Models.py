@@ -4,8 +4,8 @@ import uuid
 
 
 class MinimalSource(BaseModel):
-    """ Represent a source, and store the path and the
-        indexs of the start and the end """
+    """Represent a retrieved source as the raw text plus its location
+    (file path and start/end character indices in the original file)."""
     text: str
     file_path: str
     first_character_index: int
@@ -13,48 +13,53 @@ class MinimalSource(BaseModel):
 
 
 class MinimalSourceOutput(BaseModel):
+    """Public-facing source description: only the file path and the start/end
+    character indices, without the chunk text."""
     file_path: str
     first_character_index: int
     last_character_index: int
 
 
 class UnansweredQuestion(BaseModel):
-    """ Represent a question and its ID """
+    """A question waiting to be answered, paired with a unique identifier."""
     question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question: str
 
 
 class AnsweredQuestion(BaseModel):
-    """ Represent the answer and the sources """
+    """Ground-truth answer for a question, with the list of supporting sources."""
     sources: list[MinimalSource]
     answer: str
 
 
 class MinimalSearchResults(BaseModel):
-    """ Represent the question and the search results """
+    """Retrieval output for a single question: the question itself and the
+    list of sources returned by the retriever."""
     question_id: str
     question_str: str
     retrieved_sources: list[MinimalSource]
 
 
 class MinimalAnswer(MinimalSearchResults):
-    """ Represent the answer """
+    """Search results extended with the generated answer for the question."""
     answer: str
 
 
 class RagDataset(BaseModel):
-    """ Store all the questions and answer instances """
+    """Collection of questions (answered or unanswered) used as a dataset."""
     rag_questions: List[AnsweredQuestion | UnansweredQuestion]
 
 
 class StudentSearchResults(BaseModel):
-    """ Represent the search results """
+    """Aggregate retrieval results produced by a student run, with the ``k``
+    value used at retrieval time."""
     search_results: List[MinimalSearchResults]
     k: int
 
 
 class StudentSearchResultsAndAnswer(BaseModel):
-    """ Represent the question, the search results and the answer """
+    """Final RAG output for one question: the question, the retrieved sources
+    (without text) and the generated answer."""
     question_id: str
     question: str
     retrieved_sources: List[MinimalSourceOutput]

@@ -12,6 +12,8 @@ from tqdm import tqdm
 
 
 class LLM(BaseModel):
+    """Thin wrapper around the Qwen2.5 text-generation pipeline used to turn
+    retrieved sources into a natural-language answer."""
     model_config = ConfigDict(arbitrary_types_allowed=True)
     generator: ClassVar[Any] = pipeline(
         "text-generation", model="Qwen/Qwen2.5-0.5B-Instruct")
@@ -19,6 +21,9 @@ class LLM(BaseModel):
     def generate_answer(self, list_sources: MinimalSearchResults,
                         query: UnansweredQuestion,
                         max_tokens: int = 50) -> StudentSearchResultsAndAnswer:
+        """Generate an answer for ``query`` using the top retrieved source as
+        context and return a :class:`StudentSearchResultsAndAnswer` packaging
+        the question, the source pointers and the generated text."""
         output_sources: List[MinimalSourceOutput] = []
 
         prompt: str = (
@@ -54,6 +59,9 @@ class LLM(BaseModel):
         return answer_object
 
     def handle_dataset(self, search_results_path: str, save_directory: str):
+        """Load a :class:`StudentSearchResults` file, generate an LLM answer
+        for every question it contains and save the resulting answered
+        dataset as JSON under ``save_directory``."""
         try:
             with open(search_results_path, "r", encoding="utf-8") as file:
                 json_data = file.read()
